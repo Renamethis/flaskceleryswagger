@@ -31,4 +31,7 @@ class FlaskCelery(Celery):
         self.app = app
         self.config_from_object(app.config)
 
-celery = FlaskCelery()
+celery = FlaskCelery(
+    broker="redis://redis:6379/0",
+    backend="redis://redis:6379/0"
+)

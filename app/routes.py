@@ -153,7 +153,8 @@ def delete_price(id):
     price = Price.query.get(id)
     if price is None:
         abort(404)
-    db.session.delete(price)
+    local_object = db.session.merge(price)
+    db.session.delete(local_object)
     db.session.commit()
     return jsonify({'result': True}), 200
 

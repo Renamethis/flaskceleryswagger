@@ -1,8 +1,13 @@
 # Родительский образ
-FROM python:3.6.9-slim
+FROM python:3.10.5
 
 # Обновляем pip
 RUN pip install -U pip 
 
 # Устанавливаем библиотеки
-RUN pip3 install flask jsonify requests flask_sqlalchemy pymysql celery cryptography flasgger
+
+RUN pip install pipenv
+WORKDIR /code
+COPY Pipfile* /code/
+RUN pipenv install --system --deploy --ignore-pipfile
+ADD app /code/
