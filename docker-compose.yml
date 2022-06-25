@@ -1,4 +1,4 @@
-version: "3.6"
+version: "3.11"
 
 services:    
   python:
@@ -11,9 +11,7 @@ services:
     stdin_open: true
     volumes:
       - .:/app:z
-    build:
-      context: .
-      dockerfile: python.Dockerfile
+    build: .
     working_dir: /app
     command: flask run --host=0.0.0.0
     environment:
