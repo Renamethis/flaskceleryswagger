@@ -1,9 +1,7 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from config import config
-from app.FlaskCelery import celery
-
-db = SQLAlchemy()
+from .extensions import db, celery
+import os
 
 def create_app(config_name):
     app = Flask(__name__)

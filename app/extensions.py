@@ -1,5 +1,6 @@
 import flask
 from celery import Celery
+from flask_sqlalchemy import SQLAlchemy
 
 class FlaskCelery(Celery):
 
@@ -31,7 +32,10 @@ class FlaskCelery(Celery):
         self.app = app
         self.config_from_object(app.config)
 
+db = SQLAlchemy()
 celery = FlaskCelery(
+    'app',
     broker="redis://redis:6379/0",
-    backend="redis://redis:6379/0"
+    backend="redis://redis:6379/0",
+    include=["app.routes"]
 )

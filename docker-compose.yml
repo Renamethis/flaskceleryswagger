@@ -17,6 +17,19 @@ services:
     environment:
       - FLASK_APP=server.py
       - DEV_DATABASE_URL=mysql+pymysql://user:secret@localhost:3306/prices
+      - SQLALCHEMY_DATABASE_URI=mysql+pymysql://user:secret@localhost:3306/prices
+  celery:
+    build: .
+    container_name: 'celery'
+    command: celery -A app.celery worker --loglevel=info
+    volumes:
+      - .:/code
+    network_mode: "service:db"
+    depends_on:
+      - redis
+    environment:
+      - DEV_DATABASE_URL=mysql+pymysql://user:secret@localhost:3306/prices
+      - SQLALCHEMY_DATABASE_URI=mysql+pymysql://user:secret@localhost:3306/prices
   db:
     container_name: db
     image: mysql:5.7
@@ -41,18 +54,8 @@ services:
     command: redis-server
     ports:
       - 6379:6379
-  celery:
-    build: .
-    container_name: 'celery'
-    command: celery -A app worker -B
-    volumes:
-      - .:/code
     links:
-      - redis
-    depends_on:
-      - redis
       - db
-      - python
 volumes:
   my-db:
     driver: local

@@ -7,12 +7,13 @@ name = "pypi"
 flask = "*"
 jsonify = "*"
 requests = "*"
-flask-sqlalchemy = "*"
 pymysql = "*"
 celery = "*"
 cryptography = "*"
 flasgger = "*"
 redis = "*"
+matplotlib = "*"
+flask-sqlalchemy = "*"
 
 [dev-packages]
 

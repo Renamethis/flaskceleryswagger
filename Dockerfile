@@ -7,6 +7,7 @@ RUN pip install -U pip
 # Устанавливаем библиотеки
 
 RUN pip install pipenv
+RUN mkdir -p /code
 WORKDIR /code
 COPY Pipfile* /code/
 RUN pipenv install --system --deploy --ignore-pipfile
