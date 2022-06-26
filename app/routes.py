@@ -11,7 +11,13 @@ from .__init__ import create_app
 from flasgger import Swagger
 from .extensions import db, celery
 import os
-from datetime import datetime
+from datetime import datetime, date
+from sqlalchemy import extract  
+from json import loads
+import re
+from random import random
+
+COLUMNS = 4
 
 swagger_config = {
     "headers": [
@@ -76,7 +82,7 @@ def create(form):
   price = Price(
       id=id,
       pdate=form.get('date'),
-      price=form.get('price')
+      prices=form.get('prices')
   )
   db.session.add(price)
   db.session.commit()
@@ -102,7 +108,7 @@ def update(id, form):
     return price.to_json()
 
 @app.route("/prices", methods=["GET"])
-def get_trackers():
+def get_entries():
     """Endpoint which returns all the prices history from database
     ---
     tags:
@@ -116,7 +122,7 @@ def get_trackers():
     return jsonify(result), 200
 
 @app.route("/prices/<id>", methods=["GET"])
-def get_tracker(id):
+def get_entry(id):
     """Endpoint which returns current price entry by given id from database
     ---
     tags:
@@ -153,24 +159,27 @@ def create_price():
         in: formData
         type: string
         required: true
-        description: Current date in such format - YYYY-MM-DD H:M:S
-      - name: price
+        description: Current date in such format - YYYY-MM-DD
+      - name: prices
         in: formData
-        type: number
+        schema:
+          type: string
+          example: "[15, 30, 45, 60]"
         required: true
-        minimum: 0.0
-        description: Given price
+        description: Given prices
     responses:
       201:
         description: Price entry was sucessfully created
       400:
         description: Entry(ies) are not correct
     """
-    app.logger.info(request.form)
+    prices = re.findall("(\d+(?:\.\d+)?)", request.form.get('prices'))
+    if(not prices or len(prices) < COLUMNS):
+      abort(400)
     if not request.form:
         abort(400)
     try:
-      datetime.strptime(request.form.get('date'), "%Y-%m-%d %H:%M:%S")
+      datetime.strptime(request.form.get('date'), "%Y-%m-%d")
     except ValueError:
       abort(400)
     task = create.delay(request.form)
@@ -221,12 +230,13 @@ def update_price(id):
         in: formData
         type: string
         required: false
-        description: Current date in such format - YYYY-MM-DD H:M:S
-      - name: price
+        description: Current date in such format - YYYY-MM-DD
+      - name: prices
         in: formData
-        type: number
-        required: false
-        minimum: 0.0
+        schema:
+          type: string
+          example: "[15, 30, 45, 60]"
+        required: true
         description: Given price
     responses:
       200:
@@ -237,7 +247,7 @@ def update_price(id):
     if not request.form:
         abort(400)
     try:
-      datetime.strptime(request.form.get('date'), "%Y-%m-%d %H:%M:%S")
+      datetime.strptime(request.form.get('date'), "%Y-%m-%d")
     except ValueError:
       abort(400)
     task = update.delay(id, request.form)
@@ -248,7 +258,7 @@ def update_price(id):
 
 @app.route('/prices/history', methods=['GET'])
 def draw_history():
-  """Endpoint which returns matplotlib chart
+  """Endpoint which returns matplotlib chart of prices history
   ---
   tags:
     - Charts
@@ -259,12 +269,18 @@ def draw_history():
       description: Price history is empty
   """
   dates = [entry.pdate for entry in Price.query.order_by(Price.pdate).all()]
-  prices = [entry.price for entry in Price.query.order_by(Price.price).all()]
-  if(not dates or not prices):
+  if(not dates):
     abort(404)
+  prices = [[] for _ in re.findall("(\d+(?:\.\d+)?)", Price.query.first().prices)]
+  for entry in Price.query.order_by(Price.pdate).all():
+    splitted = re.findall("(\d+(?:\.\d+)?)", entry.prices)
+    for i in range(len(prices)):
+      prices[i].append(float(splitted[i]))
   fig = Figure()
   axis = fig.add_subplot(1, 1, 1)
-  axis.plot(dates, prices, "go-")
+  for price in prices:
+    color = (random(), random(), random())
+    axis.plot(dates, price, marker='o', color=color)
   fmt = mdates.DateFormatter('%d %B %Y')
   axis.xaxis.set_major_formatter(fmt)
   for tick in axis.get_xticklabels():
@@ -273,3 +289,40 @@ def draw_history():
   output = io.BytesIO()
   FigureCanvas(fig).print_png(output)
   return Response(output.getvalue(), mimetype='image/png')
+
+@app.route('/prices/seasonality', methods=['GET'])
+def draw_seasonality():
+  """Endpoint which returns matplotlib chart or seasonality
+  ---
+  tags:
+    - Charts
+  responses:
+    200:
+      description: Chart successfully builded
+    404:
+      description: Price history is empty
+  """
+  dates = [entry.pdate for entry in Price.query.order_by(Price.pdate).all()]
+  entries_amount = len(dates)
+  if(not dates):
+    abort(404)
+  fig = Figure()
+  axis = fig.add_subplot(1, 1, 1)
+  entries = {}
+  for date in dates:
+    key = (date.year, date.month)
+    if(key not in entries.keys()):
+      entries[key] = 1
+    else:
+      entries[key] += 1
+  coeffs = []
+  for key in entries.keys():
+    coeffs.append(entries[key]/entries_amount)
+  color = (random(), random(), random())
+  entries = { datetime(year=key[0], month=key[1], day=1).strftime("%Y %m"): entries[key]/entries_amount for key in entries.keys() }
+  
+  axis.plot(entries.keys(), entries.values(), marker='o', color=color)
+  output = io.BytesIO()
+  FigureCanvas(fig).print_png(output)
+  return Response(output.getvalue(), mimetype='image/png')
+ 
