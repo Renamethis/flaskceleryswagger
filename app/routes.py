@@ -59,10 +59,6 @@ template = {
     },
     "version": "0.0.1"
   },
-  "schemes": [
-    "http",
-    "https"
-  ],
 }
 
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
