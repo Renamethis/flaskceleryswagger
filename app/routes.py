@@ -14,7 +14,7 @@ from .extensions import db, celery
 import os
 from datetime import datetime, date
 from sqlalchemy import extract  
-from json import loads
+from json import loads, dumps
 import re
 from random import random
 import csv
@@ -79,7 +79,7 @@ def at_start(sender, **k):
       for entry in data:
         new_entry = Price(
           id=i,
-          pdate=datetime.strptime(entry[1], "%d/%M/%Y"),
+          pdate=datetime.strptime(entry[1], "%m/%d/%Y"),
           prices=','.join([price for price in entry[2:]])
         )
         db.session.add(new_entry)
@@ -92,13 +92,17 @@ def get(id):
   if(id == None):
     prices = Price.query.all()
     data = [price.to_json() for price in prices]
+    for d in data:
+      d['date'] = d['date'].strftime("%Y-%m-%d")
     return data
   else:
     price = Price.query.get(id)
     if(price is None):
       return None
     else:
-      return price.to_json()
+      price = price.to_json()
+      price['date'] = price['date'].strftime("%Y-%m-%d")
+      return price
   
 @celery.task()
 def create(form):
@@ -119,7 +123,9 @@ def create(form):
   )
   db.session.add(price)
   db.session.commit()
-  return price.to_json()
+  price = price.to_json()
+  price['date'] = price['date'].strftime("%Y-%m-%d")
+  return price
 
 @celery.task()
 def delete(id):
@@ -139,7 +145,9 @@ def update(id, form):
       price.pdate = form.get('date', price.pdate)
     price.prices = form.get('prices', price.prices)
     db.session.commit()
-    return price.to_json()
+    price = price.to_json()
+    price['date'] = price['date'].strftime("%Y-%m-%d")
+    return price
 
 # Flask endpoints
 @app.route("/prices", methods=["GET"])
@@ -357,7 +365,6 @@ def draw_seasonality():
   color = (random(), random(), random())
   dates = [datetime(year=key[0], month=key[1], day=1) for key in entries.keys()]
   values = [entries[key]/entries_amount for key in entries.keys()]
-  #entries = { datetime(year=key[0], month=key[1], day=1).strftime("%Y %m"): entries[key]/entries_amount for key in entries.keys()}
   axis.plot(dates, values, marker='o', color=color)
   fmt = mdates.DateFormatter('%Y %B')
   axis.xaxis.set_major_formatter(fmt)
