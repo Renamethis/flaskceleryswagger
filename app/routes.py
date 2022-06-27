@@ -134,8 +134,9 @@ def update(id, form):
     price = Price.query.get(id)
     if(price is None):
       return None
-    price.pdate = form.get('date', price.pdate)
-    price.price = form.get('price', price.price)
+    if(form.get('date') is not None):
+      price.pdate = form.get('date', price.pdate)
+    price.prices = form.get('prices', price.prices)
     db.session.commit()
     return price.to_json()
 
@@ -269,7 +270,7 @@ def update_price(id):
         schema:
           type: string
           example: "[15, 30, 45, 60]"
-        required: true
+        required: false
         description: Given price
     responses:
       200:
@@ -279,10 +280,11 @@ def update_price(id):
     """
     if not request.form:
         abort(400)
-    try:
-      datetime.strptime(request.form.get('date'), "%Y-%m-%d")
-    except ValueError:
-      abort(400)
+    if(request.form.get('date') is not None):
+      try:
+        datetime.strptime(request.form.get('date'), "%Y-%m-%d")
+      except ValueError:
+        abort(400)
     task = update.delay(id, request.form)
     result = task.wait(timeout=None)
     if result is None:
