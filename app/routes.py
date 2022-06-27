@@ -1,4 +1,5 @@
 import io
+import json
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import numpy as np
 from matplotlib.figure import Figure
@@ -354,9 +355,10 @@ def draw_seasonality():
   for key in entries.keys():
     coeffs.append(entries[key]/entries_amount)
   color = (random(), random(), random())
-  entries = { datetime(year=key[0], month=key[1], day=1).strftime("%Y %m"): entries[key]/entries_amount for key in entries.keys() }
-  
-  axis.plot(entries.keys(), entries.values(), marker='o', color=color)
+  dates = [datetime(year=key[0], month=key[1], day=1) for key in entries.keys()]
+  values = [entries[key]/entries_amount for key in entries.keys()]
+  #entries = { datetime(year=key[0], month=key[1], day=1).strftime("%Y %m"): entries[key]/entries_amount for key in entries.keys()}
+  axis.plot(dates, values, marker='o', color=color)
   fmt = mdates.DateFormatter('%Y %B')
   axis.xaxis.set_major_formatter(fmt)
   for tick in axis.get_xticklabels():
