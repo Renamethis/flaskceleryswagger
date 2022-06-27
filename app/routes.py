@@ -16,9 +16,21 @@ from sqlalchemy import extract
 from json import loads
 import re
 from random import random
+import csv
+from time import sleep
+from celery.signals import worker_ready
 
-COLUMNS = 4
+# Load data from csv file
+CSV_PATH = "app/database/init_values.csv"
 
+data = []
+with open(CSV_PATH) as File:
+    rows = list(csv.reader(File))
+    for row in rows:
+        data.append(row)
+COLUMNS = len(data[0]) - 2
+
+# Swagger global configuration
 swagger_config = {
     "headers": [
     ],
@@ -33,6 +45,7 @@ swagger_config = {
     "specs_route": "/docs/"
 }
 
+# Swagger template configuration
 template = {
   "swagger": "2.0",
   "info": {
@@ -54,6 +67,25 @@ template = {
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
 swagger = Swagger(app, config=swagger_config, template=template)
 
+# Initialize database
+@worker_ready.connect
+def at_start(sender, **k):
+  sleep(10) # Wait database
+  with app.app_context():
+    prices = Price.query.all()
+    if(not prices):
+      i = 0
+      for entry in data:
+        new_entry = Price(
+          id=i,
+          pdate=datetime.strptime(entry[1], "%d/%M/%Y"),
+          prices=','.join([price for price in entry[2:]])
+        )
+        db.session.add(new_entry)
+        i+=1
+      db.session.commit()
+
+# CRUD celery tasks
 @celery.task()
 def get(id):
   if(id == None):
@@ -107,6 +139,7 @@ def update(id, form):
     db.session.commit()
     return price.to_json()
 
+# Flask endpoints
 @app.route("/prices", methods=["GET"])
 def get_entries():
     """Endpoint which returns all the prices history from database
@@ -322,6 +355,11 @@ def draw_seasonality():
   entries = { datetime(year=key[0], month=key[1], day=1).strftime("%Y %m"): entries[key]/entries_amount for key in entries.keys() }
   
   axis.plot(entries.keys(), entries.values(), marker='o', color=color)
+  fmt = mdates.DateFormatter('%Y %B')
+  axis.xaxis.set_major_formatter(fmt)
+  for tick in axis.get_xticklabels():
+    tick.set_rotation(30)
+    tick.set_fontsize(5)
   output = io.BytesIO()
   FigureCanvas(fig).print_png(output)
   return Response(output.getvalue(), mimetype='image/png')

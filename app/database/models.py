@@ -1,5 +1,6 @@
 from ..extensions import db
 
+# Price ORM model
 class Price(db.Model):
     __tablename__ = 'prices'
     query = db.session.query_property()

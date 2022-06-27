@@ -2,6 +2,7 @@ import flask
 from celery import Celery
 from flask_sqlalchemy import SQLAlchemy
 
+# Celery processing class
 class FlaskCelery(Celery):
 
     def __init__(self, *args, **kwargs):
@@ -32,6 +33,7 @@ class FlaskCelery(Celery):
         self.app = app
         self.config_from_object(app.config)
 
+# Define database and Celery objects
 db = SQLAlchemy()
 celery = FlaskCelery(
     'app',
