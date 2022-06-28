@@ -320,7 +320,7 @@ def draw_history():
   axis = fig.add_subplot(1, 1, 1)
   for price in prices:
     color = (random(), random(), random())
-    axis.plot(dates, price, marker='o', color=color)
+    axis.plot(dates, price, marker='o', markersize=2, color=color)
   fmt = mdates.DateFormatter('%Y')
   axis.xaxis.set_major_formatter(fmt)
   output = io.BytesIO()
@@ -358,7 +358,7 @@ def draw_seasonality():
   color = (random(), random(), random())
   dates = [datetime(year=key[0], month=key[1], day=1) for key in entries.keys()]
   values = [entries[key]/entries_amount for key in entries.keys()]
-  axis.plot(dates, values, marker='o', color=color)
+  axis.plot(dates, values, marker='o', markersize=2 color=color)
   fmt = mdates.DateFormatter('%Y')
   axis.xaxis.set_major_formatter(fmt)
   output = io.BytesIO()
